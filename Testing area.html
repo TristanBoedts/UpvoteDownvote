@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upvote Drift Playground</title>
+<meta name="description" content="Move candidates around a political (or social media) spectrum and see why upvote-only systems with many candidates drift outward, and how one equal downvote pulls them back.">
+<style>
+:root{
+  --bg:#F6F3EC; --card:#FFFFFF; --ink:#1B2A41; --muted:#5B6678; --faint:#E3E6EE; --line:#D3D8E2;
+  --pop:#B4BCC9; --up:#E8702A; --down:#2F6FDE; --accent:#E8702A; --accentInk:#FFFFFF;
+  --shadow:0 1px 2px rgba(27,42,65,.06),0 4px 14px rgba(27,42,65,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1724; --card:#172234; --ink:#EAF0F8; --muted:#9AA7BA; --faint:#25324A; --line:#2D3B55;
+    --pop:#4A5870; --up:#F28A4B; --down:#6B9BFF; --accent:#F28A4B; --accentInk:#0F1724;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1724; --card:#172234; --ink:#EAF0F8; --muted:#9AA7BA; --faint:#25324A; --line:#2D3B55;
+  --pop:#4A5870; --up:#F28A4B; --down:#6B9BFF; --accent:#F28A4B; --accentInk:#0F1724; --shadow:none;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 Calibri,Carlito,"Segoe UI",system-ui,-apple-system,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+h1{font:700 26px/1.2 Cambria,Caladea,Georgia,serif;margin:0}
+.sub{color:var(--muted);margin:2px 0 14px;max-width:70ch}
+.tabs{display:flex;gap:6px;margin:10px 0 14px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.card h2{font:700 15px/1.2 Calibri,Carlito,sans-serif;margin:0 0 8px;color:var(--muted);letter-spacing:.02em;text-transform:uppercase}
+svg{display:block;width:100%;height:auto;touch-action:none}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+button.b{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer}
+button.b:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);color:var(--accentInk);border-color:var(--accent)}
+.ctl{margin:0 0 12px}
+.ctl label{display:flex;justify-content:space-between;gap:8px;font-weight:600;font-size:15px}
+.ctl label span.v{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.ctl small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:2px}
+input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0 0}
+select{width:100%;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:15px;margin:6px 0}
+.hint{background:var(--faint);border-radius:10px;padding:10px 12px;margin:10px 0 0;font-size:15px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 10px;border-radius:999px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px}
+.mini{border:1px solid var(--line);border-radius:10px;padding:8px;font-size:14px;display:flex;gap:8px;align-items:center}
+.mini b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;color:#fff;font-size:14px;flex:none}
+.mini .u{color:var(--up);font-weight:700}.mini .d{color:var(--down);font-weight:700}
+.status{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 0;font-size:15px}
+.status div{background:var(--faint);padding:6px 10px;border-radius:10px}
+.status strong{font-variant-numeric:tabular-nums}
+.dot{cursor:grab}.dot:active{cursor:grabbing}
+.dot:focus-visible circle{stroke:var(--ink);stroke-width:3}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:600}
+footer{margin-top:20px;color:var(--muted);font-size:14px}
+a{color:var(--down)}
+.sr{position:absolute;left:-9999px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Upvote Drift Playground</h1>
+  <button class="b" id="themeBtn" aria-label="Toggle dark mode">Light / dark</button>
+</header>
+<p class="sub">Candidates (or posts) compete for votes along a spectrum. Each person votes for the nearest candidate. Everyone is free to move. Where do they end up? Drag candidates, press play, and change the rules.</p>
+
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" id="tab1" aria-selected="true">1 · Candidates move</button>
+  <button class="tab" role="tab" id="tab2" aria-selected="false">2 · People respond too</button>
+  <button class="tab" role="tab" id="tab3" aria-selected="false">3 · The norm moves (speculative)</button>
+</div>
+
+<!-- ============================ TAB 1 ============================ -->
+<section id="p1" class="grid">
+  <div>
+    <div class="card">
+      <div class="presets" id="presets"></div>
+      <svg id="main" viewBox="0 0 900 310" role="img" aria-label="Candidates positioned along a left to right spectrum, above a track. The grey shape on top shows where people are."></svg>
+      <div class="legend"><span><i style="background:var(--pop)"></i>where people are</span><span>Drag a candidate, or focus it and use the arrow keys.</span></div>
+      <div class="status" id="status1" aria-live="polite"></div>
+      <div class="hint" id="hint1"></div>
+      <div class="row">
+        <button class="b primary" id="play">▶ Play</button>
+        <button class="b" id="step">Step one move</button>
+        <button class="b" id="round">Step one round</button>
+        <button class="b" id="shuffle">Random start</button>
+        <button class="b" id="middle">All in the middle</button>
+      </div>
+      <div class="cards" id="cards"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Where each candidate has been</h2>
+      <svg id="hist" viewBox="0 0 900 160" role="img" aria-label="Line chart of each candidate's position over time"></svg>
+    </div>
+  </div>
+  <aside class="card" aria-label="Controls">
+    <h2>Rules</h2>
+    <div class="ctl"><label for="K">Candidates <span class="v" id="Kv"></span></label>
+      <input type="range" id="K" min="2" max="10" step="1"><small>2 is the classic case. Try 3, then 4, 5, 6 and beyond.</small></div>
+    <div class="ctl"><label for="W">Downvote weight <span class="v" id="Wv"></span></label>
+      <input type="range" id="W" min="0" max="1" step="0.05"><small>0 = upvote only. 1 = every person also gets one equal downvote, cast against the candidate furthest from them.</small></div>
+    <div class="ctl"><label for="shape">Where people are</label>
+      <select id="shape"><option value="even">Spread evenly</option><option value="bell">Most people near the middle</option><option value="hills">Two hills (divided)</option></select></div>
+    <div class="ctl" id="sdRow"><label for="SD">Centre strength <span class="v" id="SDv"></span></label>
+      <input type="range" id="SD" min="0.12" max="0.8" step="0.02"><small>Left = a tight middle (like Norway or Switzerland). Right = a wide, flat crowd.</small></div>
+    <div class="ctl" id="gapRow"><label for="GAP">Distance between hills <span class="v" id="GAPv"></span></label>
+      <input type="range" id="GAP" min="0.2" max="0.9" step="0.05"></div>
+    <div class="ctl" id="tailRow"><label for="TAIL">Extra people at the edges <span class="v" id="TAILv"></span></label>
+      <input type="range" id="TAIL" min="0" max="0.8" step="0.05"><small>Mixes in an even crowd: fatter tails.</small></div>
+    <div class="ctl"><label for="SPEED">Speed <span class="v" id="SPEEDv"></span></label>
+      <input type="range" id="SPEED" min="1" max="10" step="1"></div>
+    <label class="check"><input type="checkbox" id="lockA"> <span>I play candidate A: it stays where I drag it, the others react.</span></label>
+    <div class="row"><button class="b" id="copy">Copy link to this setup</button></div>
+    <details><summary>QR code for this page</summary><div id="qr" style="margin-top:8px"></div><small id="qrmsg" style="color:var(--muted)"></small></details>
+  </aside>
+</section>
+
+<!-- ============================ TAB 2 ============================ -->
+<section id="p2" class="grid" hidden>
+  <div>
+    <div class="card">
+      <div class="presets" id="presets2"></div>
+      <svg id="pop" viewBox="0 0 900 300" role="img" aria-label="Histogram of where people stand, before and now, with the candidates marked beneath"></svg>
+      <div class="legend"><span><i style="background:var(--pop)"></i>where people started</span><span><i id="nowKey" style="background:var(--up)"></i>where they stand now</span><span><i style="background:var(--faint);border:1px solid var(--line)"></i>the middle</span></div>
+      <div class="status" id="status2" aria-live="polite"></div>
+      <div class="hint" id="hint2"></div>
+      <div class="row">
+        <button class="b primary" id="play2">▶ Play</button>
+        <button class="b" id="reset2">Reset</button>
+        <button class="b" id="noise2">Try different random noise</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Share of people in the middle, over time</h2>
+      <svg id="hist2" viewBox="0 0 900 150" role="img" aria-label="Line chart of the share of people in the middle over time"></svg>
+    </div>
+  </div>
+  <aside class="card" aria-label="Controls">
+    <h2>Rules</h2>
+    <div class="ctl"><label for="K2">Candidates <span class="v" id="K2v"></span></label>
+      <input type="range" id="K2" min="2" max="8" step="1"></div>
+    <div class="ctl"><label for="W2">Downvote weight <span class="v" id="W2v"></span></label>
+      <input type="range" id="W2" min="0" max="1" step="0.05"></div>
+    <div class="ctl"><label for="WS">Switch the downvote on at round <span class="v" id="WSv"></span></label>
+      <input type="range" id="WS" min="0" max="150" step="5"><small>0 = from the start. Later = the downvote arrives after the system has already drifted.</small></div>
+    <div class="ctl"><label for="pk">Who the people are</label>
+      <select id="pk"><option value="normal">Bell shaped</option><option value="core">Bell plus wide flanks</option><option value="bimodal">Two hills</option><option value="heavy">Long tails</option></select></div>
+    <div class="ctl"><label for="PS">Width of the crowd <span class="v" id="PSv"></span></label>
+      <input type="range" id="PS" min="0.4" max="1.4" step="0.05"><small>Small = a strong middle. Large = a thin middle.</small></div>
+    <div class="ctl"><label for="AL">How strongly people follow their candidate <span class="v" id="ALv"></span></label>
+      <input type="range" id="AL" min="0.01" max="0.15" step="0.01"></div>
+    <div class="ctl"><label for="MU">How strongly people stay true to themselves <span class="v" id="MUv"></span></label>
+      <input type="range" id="MU" min="0" max="0.1" step="0.005"></div>
+    <div class="ctl"><label for="SPEED2">Speed <span class="v" id="SPEED2v"></span></label>
+      <input type="range" id="SPEED2" min="1" max="10" step="1"></div>
+    <div class="row"><button class="b" id="copy2">Copy link to this setup</button></div>
+  </aside>
+</section>
+
+<!-- ============================ TAB 3 ============================ -->
+<section id="p3" class="grid" hidden>
+  <div>
+    <div class="card">
+      <div class="presets" id="presets3"></div>
+      <svg id="norm" viewBox="0 0 900 300" role="img" aria-label="Histogram of where people stand, where they started, and what they now treat as normal, with candidates marked beneath"></svg>
+      <div class="legend"><span><i style="background:var(--pop)"></i>where people started</span><span><i id="nowKey3" style="background:var(--up)"></i>where they stand now</span><span><i style="background:none;border:2px dashed var(--ink)"></i>what they now treat as normal</span><span><i style="background:var(--faint);border:1px solid var(--line)"></i>the original middle</span></div>
+      <div class="status" id="status3" aria-live="polite"></div>
+      <div class="hint" id="hint3"></div>
+      <div class="row">
+        <button class="b primary" id="play3">▶ Play</button>
+        <button class="b" id="reset3">Reset</button>
+        <button class="b" id="noise3">Try different random noise</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Share of people still in the original middle, over time</h2>
+      <svg id="hist3" viewBox="0 0 900 150" role="img" aria-label="Line chart of the share of people still in the original middle over time"></svg>
+    </div>
+  </div>
+  <aside class="card" aria-label="Controls">
+    <h2>Rules</h2>
+    <div class="hint" style="margin:0 0 12px"><strong>Speculative.</strong> This tab assumes that whoever wins drags the crowd's sense of the centre toward themselves. That is an assumption, not a finding. The direction of the slide is chance.</div>
+    <div class="ctl"><label for="ETA">How fast a new normal sets in <span class="v" id="ETAv"></span></label>
+      <input type="range" id="ETA" min="0" max="0.1" step="0.005"><small>0 = the crowd's sense of the centre never moves (this is tab 2). Higher = each round it slides a bit further toward whoever is winning.</small></div>
+    <div class="ctl"><label for="K3">Candidates <span class="v" id="K3v"></span></label>
+      <input type="range" id="K3" min="2" max="8" step="1"></div>
+    <div class="ctl"><label for="W3">Downvote weight <span class="v" id="W3v"></span></label>
+      <input type="range" id="W3" min="0" max="1" step="0.05"></div>
+    <div class="ctl"><label for="WS3">Switch the downvote on at round <span class="v" id="WS3v"></span></label>
+      <input type="range" id="WS3" min="0" max="300" step="10"><small>0 = from the start.</small></div>
+    <div class="ctl"><label for="PS3">Width of the crowd <span class="v" id="PS3v"></span></label>
+      <input type="range" id="PS3" min="0.4" max="1.4" step="0.05"></div>
+    <div class="ctl"><label for="SPEED3">Speed <span class="v" id="SPEED3v"></span></label>
+      <input type="range" id="SPEED3" min="1" max="10" step="1"></div>
+    <div class="row"><button class="b" id="copy3">Copy link to this setup</button></div>
+  </aside>
+</section>
+
+<footer>
+  A teaching toy based on the work in <em>Free to Provoke</em> (Burnat &amp; Boedts). Simplified on purpose: it shows the mechanism, not a forecast.
+  Real systems also have strategic voting, uneven downvotes and people who react to what they dislike. See the README.
+</footer>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   CORE ENGINE (mirrors the Python reference model line by line)
+   ===================================================================== */
+const TOL = 1e-9;
+const STEP = 0.025;
+const GRID = Array.from({length: 81}, (_, i) => -1 + i * STEP);
+const XS_N = 4001;
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){let u=0,v=0;while(!u)u=r();v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+
+/* Electorate on [-1, 1]: (1-tail)*hills + tail*uniform, as in the paper's model */
+function makeElectorate(shape, sd, gap, tail){
+  const f = new Float64Array(XS_N), xs = new Float64Array(XS_N);
+  for(let i=0;i<XS_N;i++){
+    const x = -1 + 2*i/(XS_N-1); xs[i]=x;
+    const n = m => Math.exp(-0.5*((x-m)/sd)**2);
+    let h;
+    if(shape==="even") h = 1;
+    else if(shape==="bell") h = n(0);
+    else h = 0.5*(n(-gap)+n(gap));
+    f[i]=h;
+  }
+  const norm = a => {let s=0;for(let i=1;i<XS_N;i++)s+=(a[i]+a[i-1])/2*(2/(XS_N-1));return s};
+  if(shape!=="even"){const s=norm(f);for(let i=0;i<XS_N;i++)f[i]/=s}
+  const t = shape==="even" ? 1 : tail;
+  for(let i=0;i<XS_N;i++) f[i] = (1-t)*f[i] + t*0.5;
+  const s2 = norm(f); for(let i=0;i<XS_N;i++) f[i]/=s2;
+  const c = new Float64Array(XS_N);
+  for(let i=1;i<XS_N;i++) c[i]=c[i-1]+(f[i]+f[i-1])/2*(2/(XS_N-1));
+  const tot=c[XS_N-1]; for(let i=0;i<XS_N;i++) c[i]/=tot;
+  const F = x => {
+    if(x<=-1) return 0; if(x>=1) return 1;
+    const p=(x+1)/2*(XS_N-1), i=Math.floor(p), fr=p-i;
+    return c[i]*(1-fr)+c[Math.min(i+1,XS_N-1)]*fr;
+  };
+  return {f, xs, F, lo:-1, hi:1};
+}
+
+/* Empirical electorate (for the "people respond" tab): sorted sample on [-3,3] */
+function makeEmpirical(ys){
+  const n = ys.length;
+  const F = x => { // count of ys <= x
+    let lo=0, hi=n;
+    while(lo<hi){const m=(lo+hi)>>1; if(ys[m]<=x) lo=m+1; else hi=m;}
+    return lo/n;
+  };
+  return {F, lo:-1e9, hi:1e9};
+}
+
+/* net score of each candidate: share of upvotes minus w times share of downvotes.
+   Upvote: the nearest candidate (ties are split). Downvote: the furthest candidate. */
+function scores(pos, E, w){
+  const N = pos.length, F = E.F;
+  const idx = Array.from({length:N}, (_, i) => i).sort((a,b)=>pos[a]-pos[b]);
+  const s = idx.map(i => pos[i]);
+  const mass = new Array(N);
+  for(let k=0;k<N;k++){
+    const L = k===0 ? E.lo : (s[k]+s[k-1])/2;
+    const R = k===N-1 ? E.hi : (s[k]+s[k+1])/2;
+    mass[k] = F(R) - F(L);
+  }
+  const lo = s[0], hi = s[N-1], Fm = F((lo+hi)/2), allSame = (hi-lo) < TOL;
+  const up = new Array(N), down = new Array(N), net = new Array(N);
+  for(let k=0;k<N;k++){
+    let ns=0, m=0;
+    for(let j=0;j<N;j++) if(Math.abs(s[k]-s[j])<TOL){ns++; m+=mass[j];}
+    up[k]=m/ns;
+    let d=0;
+    if(Math.abs(s[k]-hi)<TOL) d = Fm/ns;
+    if(Math.abs(s[k]-lo)<TOL) d = (1-Fm)/ns;
+    if(allSame) d = 1/N;
+    down[k]=d;
+    net[k]=up[k]-w*d;
+  }
+  const out={net:new Array(N), up:new Array(N), down:new Array(N)};
+  for(let k=0;k<N;k++){out.net[idx[k]]=net[k];out.up[idx[k]]=up[k];out.down[idx[k]]=down[k];}
+  return out;
+}
+
+function bestReply(pos, i, E, w, grid){
+  const p = pos.slice(); let best=-Infinity; const vals=new Array(grid.length);
+  for(let g=0;g<grid.length;g++){
+    p[i]=grid[g]; const v=scores(p,E,w).net[i]; vals[g]=v; if(v>best) best=v;
+  }
+  let bj=-1, bd=Infinity;
+  for(let g=0;g<grid.length;g++) if(vals[g]>=best-1e-9){const d=Math.abs(grid[g]-pos[i]); if(d<bd){bd=d;bj=g;}}
+  return {x:grid[bj], value:best};
+}
+
+function regret(pos, E, w, grid, skip){
+  const cur = scores(pos,E,w).net; let worst=0;
+  for(let i=0;i<pos.length;i++){ if(i===skip) continue;
+    const b=bestReply(pos,i,E,w,grid).value-cur[i]; if(b>worst) worst=b; }
+  return worst;
+}
+const snap = x => GRID[Math.max(0,Math.min(80,Math.round((x+1)/STEP)))];
+
+/* ---- population for the coupled model (quantiles of the innate positions) ---- */
+function makePopulation(kind, sd, n){
+  const M=6001, xs=new Float64Array(M), pdf=new Float64Array(M);
+  for(let i=0;i<M;i++){
+    const x=-6+12*i/(M-1); xs[i]=x; let p;
+    if(kind==="normal") p=Math.exp(-0.5*(x/sd)**2);
+    else if(kind==="bimodal"){const m=Math.max(0.6,sd*1.5), s=0.75*sd/0.9; p=Math.exp(-0.5*((x-m)/s)**2)+Math.exp(-0.5*((x+m)/s)**2);}
+    else if(kind==="heavy"){const s=sd*0.7, df=3; p=Math.pow(1+(x/s)**2/df,-(df+1)/2);}
+    else {const wc=Math.max(0.2,sd*0.55), fs=sd*1.75, f=0.3; p=(1-f)*Math.exp(-0.5*(x/wc)**2)/wc+f*Math.exp(-0.5*(x/fs)**2)/fs;}
+    pdf[i]=p;
+  }
+  const cdf=new Float64Array(M); let a=0; for(let i=0;i<M;i++){a+=pdf[i];cdf[i]=a} for(let i=0;i<M;i++)cdf[i]/=a;
+  const z=new Float64Array(n); let j=0;
+  for(let q=0;q<n;q++){const u=(q+0.5)/n; while(j<M-1&&cdf[j]<u)j++; z[q]=Math.max(-3,Math.min(3,xs[j]));}
+  return z;
+}
+const A_GRID = Array.from({length:121},(_, i)=>-3+i*0.05);
+const snapA = x => A_GRID[Math.max(0,Math.min(120,Math.round((x+3)/0.05)))];
+
+window.__core = {scores, bestReply, regret, makeElectorate, makeEmpirical, makePopulation, GRID, A_GRID, snap};
+
+/* =====================================================================
+   UI helpers
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs={}, parent) => { const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; };
+const COLORS = ["#1FA97A","#6B5BD6","#E0679A","#E0A02A","#2F8FDE","#C0503A","#2AA3B8","#8C6B3F","#7A8A2A","#9A4FBF"];
+const LETTERS = "ABCDEFGHIJ";
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const px = x => 50 + (x+1)/2*800;            // spectrum -> pixel (tab 1)
+const toX = p => Math.max(-1, Math.min(1, (p-50)/800*2-1));
+
+/* ---------- state ---------- */
+const S = {
+  tab:1, K:5, W:0, shape:"even", SD:0.35, GAP:0.6, TAIL:0, SPEED:6,
+  pos:[], hist:[], playing:false, lockA:false, order:[], moved:false, rounds:0, preset:"",
+  // tab 2
+  K2:5, W2:0, WS:0, pk:"normal", PS:0.7, AL:0.05, MU:0.02, SPEED2:7, preset2:"",
+  K3:5, W3:0, WS3:0, PS3:0.9, ETA:0.05, SPEED3:8
+};
+let E = null, timer = null;
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function randomStart(K){ return Array.from({length:K},()=>snap(-0.9+1.8*Math.random())); }
+function spreadStart(K){ return Array.from({length:K},(_, i)=>snap(-0.8+1.6*(K===1?0.5:i/(K-1)))); }
+
+function rebuildElectorate(){ E = makeElectorate(S.shape,S.SD,S.GAP,S.TAIL); }
+
+/* ---------- presets ---------- */
+const PRESETS = [
+ {id:"two", name:"Two vendors", set:{K:2,W:0,shape:"even"}, start:()=>[-0.8,0.8], hint:"Press Play. Both creep to the middle and stay there: the classic result."},
+ {id:"three", name:"Three vendors", set:{K:3,W:0,shape:"even"}, start:()=>[-0.4,0.0,0.4], hint:"Press Play and watch: whoever is in the middle gets squeezed and hops over. Nobody ever settles."},
+ {id:"five", name:"Five, upvote only", set:{K:5,W:0,shape:"even"}, start:()=>spreadStart(5), hint:"Press Play: two camps form out on the sides and the middle empties. One camp keeps reshuffling. Try 'Random start' a few times."},
+ {id:"five-down", name:"Five + one downvote", set:{K:5,W:1,shape:"even"}, start:()=>spreadStart(5), hint:"The same five, but now every person also gets one equal downvote. Press Play."},
+ {id:"bell", name:"Bell shaped crowd", set:{K:5,W:0,shape:"bell",SD:0.3,TAIL:0}, start:()=>spreadStart(5), hint:"Most people are in the middle. The push outward is still there, but weaker. Slide the centre strength to the right to flatten the crowd."},
+ {id:"hills", name:"Two hills", set:{K:5,W:0,shape:"hills",SD:0.2,GAP:0.6,TAIL:0}, start:()=>spreadStart(5), hint:"No middle to pull anyone back. Add a downvote and see what changes."},
+ {id:"you", name:"You play A", set:{K:5,W:0,shape:"even",lockA:true}, start:()=>[0.0,-0.6,-0.2,0.3,0.7], hint:"You are candidate A. Drag it, then press Play and see how the others react. Then turn the downvote to 1 and play again."}
+];
+
+function applyPreset(p){
+  stop();
+  Object.assign(S,p.set); if(!("lockA" in p.set)) S.lockA=false;
+  S.preset=p.id; S.pos=p.start(); S.hist=[S.pos.slice()]; S.rounds=0; S.order=[]; S.moved=false;
+  rebuildElectorate(); syncControls1(); render1(); $("hint1").textContent=p.hint; writeHash();
+}
+
+/* ---------- dynamics (tab 1) ---------- */
+function nextMove(){
+  if(!S.order.length){
+    if(S.rounds>0 || S.hist.length>1){ /* finished a round */ }
+    S.order = shuffle(Array.from({length:S.K},(_, i)=>i).filter(i=>!(S.lockA&&i===0)));
+    S.moved=false;
+  }
+  if(!S.order.length) return;
+  const i = S.order.shift();
+  const r = bestReply(S.pos,i,E,S.W,GRID);
+  if(Math.abs(r.x-S.pos[i])>1e-12){ S.pos[i]=r.x; S.moved=true; }
+  if(!S.order.length){ S.rounds++; S.hist.push(S.pos.slice()); if(S.hist.length>200) S.hist.shift(); }
+  const resting = S.order.length===0 && !S.moved;
+  render1();
+  if(resting){ stop(); $("hint1").textContent = "Resting point: nobody gains by moving. Try dragging a candidate somewhere else, or change a rule."; }
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function stepRound(){ stop(); S.order=[]; const n=S.K-(S.lockA?1:0); for(let i=0;i<n;i++) nextMove(); }
+function mpt(){ return S.SPEED>6 ? S.SPEED-5 : 1; }
+function dt(){ return Math.max(16, 600/Math.pow(1.5,S.SPEED)); }
+function tick(){ for(let k=0;k<mpt()&&S.playing;k++) nextMove(); }
+function play(){ if(S.playing){stop();return} S.playing=true; $("play").textContent="❚❚ Pause"; timer=setInterval(tick, dt()); }
+function stop(){ S.playing=false; if($("play")) $("play").textContent="▶ Play"; clearInterval(timer); timer=null; }
+function restartTimer(){ if(S.playing){clearInterval(timer);timer=setInterval(tick,dt());} }
+
+/* ---------- rendering (tab 1) ---------- */
+function posWord(x){const a=Math.abs(x); const side=x<0?"left":"right"; if(a<0.08)return "centre"; if(a<0.35)return "centre-"+side; if(a<0.7)return side; return "far "+side;}
+function render1(){
+  const svg=$("main"); svg.innerHTML="";
+  const ink=cssv("--ink"), muted=cssv("--muted"), faint=cssv("--faint"), pop=cssv("--pop");
+  // density
+  const top=14, base=120, f=E.f; let mx=0; for(let i=0;i<XS_N;i+=1) if(f[i]>mx) mx=f[i];
+  const scale=(base-top-6)/Math.max(mx,0.55);
+  let d=`M ${px(-1)} ${base}`; for(let i=0;i<XS_N;i+=20) d+=` L ${px(-1+2*i/(XS_N-1)).toFixed(1)} ${(base-f[i]*scale).toFixed(1)}`;
+  d+=` L ${px(1)} ${base} Z`; el("path",{d,fill:pop,opacity:.9},svg);
+  // track, middle
+  el("rect",{x:50,y:262,width:800,height:10,rx:5,fill:faint},svg);
+  el("line",{x1:450,x2:450,y1:128,y2:278,stroke:muted,"stroke-width":1,"stroke-dasharray":"2 4",opacity:.7},svg);
+  [["left",50,"start"],["middle",450,"middle"],["right",850,"end"]].forEach(([t,x,a])=>{const e=el("text",{x,y:298,"text-anchor":a,fill:muted,"font-size":15},svg); e.textContent=t;});
+  // dots, stacked where co-located
+  const sc=scores(S.pos,E,S.W);
+  const groups=[]; S.pos.forEach((p,i)=>{let g=groups.find(g=>Math.abs(g.p-p)<0.045); if(!g){g={p,ids:[]};groups.push(g);} g.ids.push(i);});
+  const dot = (i,x,y)=>{
+    const g=el("g",{class:"dot",tabindex:0,role:"slider","aria-label":`Candidate ${LETTERS[i]}`,"aria-valuemin":-1,"aria-valuemax":1,"aria-valuenow":S.pos[i].toFixed(2),"aria-valuetext":posWord(S.pos[i]),"data-i":i},svg);
+    el("line",{x1:x,x2:x,y1:y+15,y2:262,stroke:COLORS[i],"stroke-width":2,opacity:.5},g);
+    el("circle",{cx:x,cy:y,r:16,fill:COLORS[i],stroke:cssv("--card"),"stroke-width":2.5},g);
+    const t=el("text",{x,y:y+5.5,"text-anchor":"middle","font-size":16,"font-weight":700,fill:"#fff"},g); t.textContent=LETTERS[i];
+    g.addEventListener("pointerdown",ev=>startDrag(ev,i));
+    g.addEventListener("keydown",ev=>{ if(ev.key==="ArrowLeft"||ev.key==="ArrowRight"){ev.preventDefault(); S.pos[i]=snap(S.pos[i]+(ev.key==="ArrowLeft"?-0.025:0.025)); render1(); const n=svg.querySelector(`[data-i="${i}"]`); if(n) n.focus(); writeHash();} });
+  };
+  groups.forEach(g=>{ const sp = g.ids.length>4?22:34; g.ids.forEach((i,k)=>dot(i,px(S.pos[i]),244-k*sp)); });
+  // status + cards
+  const mean=S.pos.reduce((a,b)=>a+Math.abs(b),0)/S.K;
+  const reg = regret(S.pos,E,S.W,GRID,S.lockA?0:-1);
+  $("status1").innerHTML = `<div>Moves so far: <strong>${S.rounds}</strong> rounds</div><div>Average distance from the middle: <strong>${(mean*100).toFixed(0)}%</strong></div><div>${reg<1e-6?'<strong>Resting point</strong>: nobody gains by moving':'Someone still gains by moving'}</div>`;
+  $("cards").innerHTML = S.pos.map((p,i)=>`<div class="mini"><b style="background:${COLORS[i]}">${LETTERS[i]}</b><div>${posWord(p)}<br><span class="u">▲ ${(sc.up[i]*100).toFixed(0)}%</span> ${S.W>0?`<span class="d">▼ ${(sc.down[i]*100).toFixed(0)}%</span>`:""}</div></div>`).join("");
+  renderHist1();
+}
+function renderHist1(){
+  const svg=$("hist"); svg.innerHTML=""; const muted=cssv("--muted"), faint=cssv("--faint");
+  el("rect",{x:50,y:10,width:800,height:130,fill:"none",stroke:faint},svg);
+  el("line",{x1:50,x2:850,y1:75,y2:75,stroke:muted,"stroke-dasharray":"2 4",opacity:.6},svg);
+  const h=S.hist, n=h.length; if(n<2){const t=el("text",{x:450,y:80,"text-anchor":"middle",fill:muted,"font-size":15},svg); t.textContent="Press Play: each line is one candidate."; return;}
+  const win=Math.max(30,n); const X=k=>50+k/(win-1)*800, Y=v=>140-(v+1)/2*130;
+  for(let i=0;i<S.K;i++){
+    let d=""; for(let k=0;k<n;k++) d+=(k?"L":"M")+X(k).toFixed(1)+" "+Y(h[k][i]).toFixed(1);
+    el("path",{d,fill:"none",stroke:COLORS[i],"stroke-width":2,"stroke-linejoin":"round",opacity:.9},svg);
+  }
+  const l=el("text",{x:54,y:24,fill:muted,"font-size":13},svg); l.textContent="right"; const m=el("text",{x:54,y:136,fill:muted,"font-size":13},svg); m.textContent="left";
+  const t=el("text",{x:846,y:155,"text-anchor":"end",fill:muted,"font-size":13},svg); t.textContent="time →";
+}
+
+/* drag */
+let drag=null;
+function startDrag(ev,i){ ev.preventDefault(); drag=i; ev.target.setPointerCapture&&ev.target.setPointerCapture(ev.pointerId); }
+window.addEventListener("pointermove",ev=>{
+  if(drag===null) return; const svg=$("main"), r=svg.getBoundingClientRect();
+  const x=(ev.clientX-r.left)/r.width*900; S.pos[drag]=snap(toX(x)); render1();
+});
+window.addEventListener("pointerup",()=>{ if(drag!==null){drag=null; S.order=[]; S.hist.push(S.pos.slice()); render1(); writeHash();}});
+
+/* ---------- controls (tab 1) ---------- */
+function syncControls1(){
+  $("K").value=S.K; $("Kv").textContent=S.K; $("W").value=S.W; $("Wv").textContent=S.W===0?"0 (upvote only)":S.W===1?"1 (equal downvote)":S.W.toFixed(2);
+  $("shape").value=S.shape; $("SD").value=S.SD; $("SDv").textContent=S.SD.toFixed(2); $("GAP").value=S.GAP; $("GAPv").textContent=S.GAP.toFixed(2);
+  $("TAIL").value=S.TAIL; $("TAILv").textContent=S.TAIL.toFixed(2); $("SPEED").value=S.SPEED; $("SPEEDv").textContent=S.SPEED; $("lockA").checked=S.lockA;
+  $("sdRow").style.display=S.shape==="even"?"none":""; $("gapRow").style.display=S.shape==="hills"?"":"none"; $("tailRow").style.display=S.shape==="even"?"none":"";
+}
+function bind(id,key,parse,after){ $(id).addEventListener("input",e=>{ S[key]=parse(e.target.value); after&&after(); }); }
+function onChange1(reset){ rebuildElectorate(); if(reset){S.pos=S.pos.length===S.K?S.pos:resize(S.pos,S.K); S.hist=[S.pos.slice()]; S.order=[];} syncControls1(); render1(); writeHash(); }
+function resize(p,K){ p=p.slice(0,K); while(p.length<K) p.push(snap(-0.9+1.8*Math.random())); return p; }
+bind("K","K",v=>+v,()=>{S.pos=resize(S.pos,S.K); S.hist=[S.pos.slice()]; S.order=[]; stopKeep(); onChange1(false);});
+bind("W","W",v=>+v,()=>{onChange1(false)});
+$("shape").addEventListener("change",e=>{S.shape=e.target.value; onChange1(false)});
+bind("SD","SD",v=>+v,()=>onChange1(false)); bind("GAP","GAP",v=>+v,()=>onChange1(false)); bind("TAIL","TAIL",v=>+v,()=>onChange1(false));
+bind("SPEED","SPEED",v=>+v,()=>{syncControls1();restartTimer();writeHash();});
+$("lockA").addEventListener("change",e=>{S.lockA=e.target.checked; S.order=[]; render1(); writeHash();});
+function stopKeep(){S.order=[];}
+$("play").addEventListener("click",play);
+$("step").addEventListener("click",()=>{stop();nextMove();});
+$("round").addEventListener("click",stepRound);
+$("shuffle").addEventListener("click",()=>{stop();S.pos=randomStart(S.K);S.hist=[S.pos.slice()];S.rounds=0;S.order=[];render1();writeHash();});
+$("middle").addEventListener("click",()=>{stop();S.pos=Array(S.K).fill(0);S.hist=[S.pos.slice()];S.rounds=0;S.order=[];render1();writeHash();$("hint1").textContent="Everyone in the middle. With upvotes only, one candidate can step aside and win a bigger share. With the equal downvote, nobody can."});
+$("themeBtn").addEventListener("click",()=>{const cur=document.documentElement.getAttribute("data-theme"); const dark=cur?cur==="dark":matchMedia("(prefers-color-scheme: dark)").matches; document.documentElement.setAttribute("data-theme",dark?"light":"dark"); render1(); if(S.tab===2) render2();});
+
+/* =====================================================================
+   TAB 2 : people respond too (coupled model)
+   ===================================================================== */
+const P = {seed:1, z:null, y:null, x:null, round:0, log:[], rng:null, playing:false, timer:null, ys:null};
+function resetPop(){
+  stop2();
+  P.z=makePopulation(S.pk,S.PS,1500); P.y=Float64Array.from(P.z); P.round=0; P.log=[cm(P.y)];
+  const K=S.K2; P.x=Array.from({length:K},(_, i)=>snapA(-1.5+3*(K===1?0.5:i/(K-1)))); P.rng=mulberry32(P.seed);
+  render2();
+}
+function cm(y){let c=0;for(let i=0;i<y.length;i++) if(Math.abs(y[i])<0.5)c++;return c/y.length}
+function round2(){
+  const w = P.round>=S.WS ? S.W2 : 0, n=P.y.length, K=S.K2;
+  const ys=Float64Array.from(P.y).sort(); const Emp=makeEmpirical(ys);
+  for(let i=0;i<K;i++){ P.x[i]=bestReply(P.x,i,Emp,w,A_GRID).x; }
+  const y=P.y;
+  for(let i=0;i<n;i++){
+    let bj=0,bd=Infinity; for(let j=0;j<K;j++){const d=Math.abs(y[i]-P.x[j]); if(d<bd){bd=d;bj=j;}}
+    let v=y[i]+S.AL*(P.x[bj]-y[i])+S.MU*(P.z[i]-y[i])+0.01*gauss(P.rng);
+    y[i]=Math.max(-3,Math.min(3,v));
+  }
+  P.round++; P.log.push(cm(y)); P.w=w; render2();
+}
+function play2(){ if(P.playing){stop2();return} P.playing=true; $("play2").textContent="❚❚ Pause"; P.timer=setInterval(()=>{ if(P.round>=170){stop2();return} round2(); }, 260/Math.pow(1.45,S.SPEED2)); }
+function stop2(){ P.playing=false; if($("play2")) $("play2").textContent="▶ Play"; clearInterval(P.timer); P.timer=null; }
+function hist(v,nb=60,s=1.2){ const h=new Float64Array(nb); for(const x of v){const b=Math.min(nb-1,Math.max(0,Math.floor((x+3)/6*nb))); h[b]++;}
+  const k=[];for(let i=-4;i<=4;i++)k.push(Math.exp(-0.5*(i/s)**2)); const ks=k.reduce((a,b)=>a+b); const out=new Float64Array(nb);
+  for(let i=0;i<nb;i++){let a=0;for(let j=-4;j<=4;j++){const idx=Math.min(nb-1,Math.max(0,i+j));a+=h[idx]*k[j+4]/ks} out[i]=a/v.length;} return out; }
+function render2(){
+  const svg=$("pop"); svg.innerHTML=""; const muted=cssv("--muted"), faint=cssv("--faint"), pop=cssv("--pop"), now = (P.w||0)>0?cssv("--down"):cssv("--up");
+  $("nowKey").style.background=now;
+  const X=x=>50+(x+3)/6*800, base=250, H=190;
+  el("rect",{x:X(-0.5),y:20,width:X(0.5)-X(-0.5),height:base-20,fill:faint},svg);
+  const hz=hist(P.z), hy=hist(P.y); let mx=0; for(let i=0;i<60;i++) mx=Math.max(mx,hz[i],hy[i]); mx=Math.max(mx,0.06);
+  const path=(h,fill,op)=>{ let d=`M ${X(-3)} ${base}`; for(let i=0;i<60;i++) d+=` L ${X(-3+(i+0.5)*0.1).toFixed(1)} ${(base-h[i]/mx*H).toFixed(1)}`; d+=` L ${X(3)} ${base} Z`; el("path",{d,fill,opacity:op},svg); };
+  path(hz,pop,.7); path(hy,now,.8);
+  el("line",{x1:50,x2:850,y1:base,y2:base,stroke:muted,opacity:.5},svg);
+  const lab=el("text",{x:X(0),y:36,"text-anchor":"middle",fill:muted,"font-size":14,"font-style":"italic"},svg); lab.textContent="the middle";
+  [["left",50,"start"],["right",850,"end"]].forEach(([t,x,a])=>{const e=el("text",{x,y:292,"text-anchor":a,fill:muted,"font-size":15},svg); e.textContent=t;});
+  P.x.forEach((x,i)=>{ const c=el("circle",{cx:X(x),cy:268,r:11,fill:COLORS[i],stroke:cssv("--card"),"stroke-width":2},svg); const t=el("text",{x:X(x),y:273,"text-anchor":"middle","font-size":12,"font-weight":700,fill:"#fff"},svg); t.textContent=LETTERS[i]; });
+  const start=P.log[0], cur=P.log[P.log.length-1];
+  $("status2").innerHTML=`<div>Round: <strong>${P.round}</strong></div><div>People in the middle: <strong>${(start*100).toFixed(0)}% → ${(cur*100).toFixed(0)}%</strong></div><div>Downvote: <strong>${(P.round>=S.WS?S.W2:0)>0?"on":"off"}</strong></div>`;
+  const hs=$("hist2"); hs.innerHTML=""; el("rect",{x:50,y:10,width:800,height:120,fill:"none",stroke:faint},hs);
+  const n=P.log.length, win=Math.max(60,n); let d=""; for(let k=0;k<n;k++) d+=(k?"L":"M")+(50+k/(win-1)*800).toFixed(1)+" "+(130-P.log[k]*120).toFixed(1);
+  el("path",{d,fill:"none",stroke:now,"stroke-width":2.5},hs);
+  if(S.WS>0&&S.W2>0){ const xx=50+S.WS/(win-1)*800; el("line",{x1:xx,x2:xx,y1:10,y2:130,stroke:cssv("--down"),"stroke-dasharray":"3 4"},hs); const t=el("text",{x:xx+4,y:24,fill:cssv("--down"),"font-size":13},hs); t.textContent="downvote on"; }
+  const a=el("text",{x:54,y:24,fill:muted,"font-size":13},hs); a.textContent="everyone"; const b=el("text",{x:54,y:126,fill:muted,"font-size":13},hs); b.textContent="nobody";
+}
+const PRESETS2 = [
+ {name:"Strong centre, upvote only", set:{pk:"normal",PS:0.6,K2:5,W2:0,WS:0}, hint:"A strong middle: two small hills form, but they stay close to the centre."},
+ {name:"Thin centre, upvote only", set:{pk:"normal",PS:1.0,K2:5,W2:0,WS:0}, hint:"A thin middle: the centre empties and the hills drift apart."},
+ {name:"Thin centre + downvote from the start", set:{pk:"normal",PS:1.0,K2:5,W2:1,WS:0}, hint:"Same crowd, but with the equal downvote from the start: people end up bunched in the middle."},
+ {name:"Downvote arrives late", set:{pk:"normal",PS:1.0,K2:5,W2:1,WS:60}, hint:"The downvote is switched on after 60 rounds, once the middle has already emptied. Watch the middle fill back in. Try moving the 'switch on at round' slider later and later."}
+];
+function applyPreset2(p){ P.seed=1; Object.assign(S,p.set); syncControls2(); resetPop(); $("hint2").textContent=p.hint; writeHash(); }
+function syncControls2(){
+  const set=(id,val,txt)=>{$(id).value=val;$(id+"v").textContent=txt===undefined?val:txt};
+  set("K2",S.K2); set("W2",S.W2,S.W2===0?"0 (upvote only)":S.W2===1?"1 (equal downvote)":S.W2.toFixed(2)); set("WS",S.WS,S.WS===0?"0 (from the start)":S.WS);
+  $("pk").value=S.pk; set("PS",S.PS,S.PS.toFixed(2)); set("AL",S.AL,S.AL.toFixed(2)); set("MU",S.MU,S.MU.toFixed(3)); set("SPEED2",S.SPEED2);
+}
+[["K2","K2",v=>+v],["W2","W2",v=>+v],["WS","WS",v=>+v],["PS","PS",v=>+v],["AL","AL",v=>+v],["MU","MU",v=>+v],["SPEED2","SPEED2",v=>+v]].forEach(([id,key,p])=>{
+  $(id).addEventListener("input",e=>{S[key]=p(e.target.value); syncControls2(); if(["K2","PS"].includes(key)) resetPop(); else if(key==="W2"||key==="WS"||key==="AL"||key==="MU"){} writeHash();});
+});
+$("pk").addEventListener("change",e=>{S.pk=e.target.value; resetPop(); writeHash();});
+$("play2").addEventListener("click",play2); $("reset2").addEventListener("click",resetPop);
+$("noise2").addEventListener("click",()=>{P.seed=P.seed%97+1; resetPop(); $("hint2").textContent="Same setup, different random wobble (noise #"+P.seed+"). With a thin middle the outcome is touchy: usually the middle empties, sometimes the candidates bunch up in the centre instead. Press Play.";});
+
+/* =====================================================================
+   TAB 3 : the norm moves (speculative extension of tab 2)
+   Same as tab 2, plus: each person's own sense of "normal" (their anchor)
+   slowly drifts toward the candidate they back.
+   ===================================================================== */
+const Q = {seed:1, z0:null, z:null, y:null, x:null, round:0, log:[], rng:null, playing:false, timer:null, w:0};
+const meanAbs = a => { let t=0; for(let i=0;i<a.length;i++) t+=Math.abs(a[i]); return t/a.length; };
+function resetNorm(){
+  stop3();
+  Q.z0=makePopulation("normal",S.PS3,1500); Q.z=Float64Array.from(Q.z0); Q.y=Float64Array.from(Q.z0);
+  Q.round=0; Q.log=[inMiddle(Q.y)]; Q.w=0;
+  const K=S.K3; Q.x=Array.from({length:K},(_, i)=>snapA(-1.5+3*(K===1?0.5:i/(K-1)))); Q.rng=mulberry32(Q.seed);
+  render3();
+}
+const medianOf = a => { const t=Float64Array.from(a).sort(); return t[t.length>>1]; };
+function inMiddle(a){ let c=0; for(let i=0;i<a.length;i++) if(Math.abs(a[i])<0.5) c++; return c/a.length; }
+function round3(){
+  const w = Q.round>=S.WS3 ? S.W3 : 0, n=Q.y.length, K=S.K3, y=Q.y, z=Q.z;
+  const Emp=makeEmpirical(Float64Array.from(y).sort());
+  for(let i=0;i<K;i++) Q.x[i]=bestReply(Q.x,i,Emp,w,A_GRID).x;
+  // the winner: the candidate with the best net score this round
+  const sc=scores(Q.x,Emp,w).net; let win=0; for(let i=1;i<K;i++) if(sc[i]>sc[win]) win=i;
+  // the whole crowd's sense of "the centre" slides a fraction of the way toward the winner
+  const shift=S.ETA*(Q.x[win]-medianOf(z));
+  for(let i=0;i<n;i++){
+    let bj=0,bd=Infinity; for(let j=0;j<K;j++){const d=Math.abs(y[i]-Q.x[j]); if(d<bd){bd=d;bj=j;}}
+    y[i]=Math.max(-3,Math.min(3, y[i]+0.05*(Q.x[bj]-y[i])+0.02*(z[i]-y[i])+0.01*gauss(Q.rng)+shift));
+    z[i]=Math.max(-3,Math.min(3, z[i]+shift));
+  }
+  Q.round++; Q.w=w; Q.log.push(inMiddle(y)); render3();
+}
+function play3(){ if(Q.playing){stop3();return} Q.playing=true; $("play3").textContent="❚❚ Pause";
+  Q.timer=setInterval(()=>{ if(Q.round>=400){stop3();return} const m=S.SPEED3>6?S.SPEED3-5:1; for(let k=0;k<m&&Q.round<400;k++) round3(); }, Math.max(16,260/Math.pow(1.45,S.SPEED3))); }
+function stop3(){ Q.playing=false; if($("play3")) $("play3").textContent="▶ Play"; clearInterval(Q.timer); Q.timer=null; }
+function render3(){
+  const svg=$("norm"); svg.innerHTML=""; const muted=cssv("--muted"), faint=cssv("--faint"), pop=cssv("--pop"), ink=cssv("--ink"), now=(Q.w||0)>0?cssv("--down"):cssv("--up");
+  $("nowKey3").style.background=now;
+  const X=x=>50+(x+3)/6*800, base=250, H=190;
+  el("rect",{x:X(-0.5),y:20,width:X(0.5)-X(-0.5),height:base-20,fill:faint},svg);
+  const h0=hist(Q.z0), hz=hist(Q.z), hy=hist(Q.y); let mx=0; for(let i=0;i<60;i++) mx=Math.max(mx,h0[i],hz[i],hy[i]); mx=Math.max(mx,0.06);
+  const path=(h,fill,op,stroke)=>{ let d=`M ${X(-3)} ${base}`; for(let i=0;i<60;i++) d+=` L ${X(-3+(i+0.5)*0.1).toFixed(1)} ${(base-h[i]/mx*H).toFixed(1)}`; d+=` L ${X(3)} ${base}`; 
+    if(stroke){ el("path",{d,fill:"none",stroke:ink,"stroke-width":2,"stroke-dasharray":"6 4"},svg);} else { el("path",{d:d+" Z",fill,opacity:op},svg);} };
+  path(h0,pop,.7); path(hy,now,.8); path(hz,null,null,true);
+  el("line",{x1:50,x2:850,y1:base,y2:base,stroke:muted,opacity:.5},svg);
+  const lab=el("text",{x:X(0),y:36,"text-anchor":"middle",fill:muted,"font-size":14,"font-style":"italic"},svg); lab.textContent="the original middle";
+  [["left",50,"start"],["right",850,"end"]].forEach(([t,x,a])=>{const e=el("text",{x,y:292,"text-anchor":a,fill:muted,"font-size":15},svg); e.textContent=t;});
+  Q.x.forEach((x,i)=>{ el("circle",{cx:X(x),cy:268,r:11,fill:COLORS[i],stroke:cssv("--card"),"stroke-width":2},svg); const t=el("text",{x:X(x),y:273,"text-anchor":"middle","font-size":12,"font-weight":700,fill:"#fff"},svg); t.textContent=LETTERS[i]; });
+  const cur=Q.log[Q.log.length-1], m=medianOf(Q.y), am=Math.abs(m), side=m<0?"left":"right";
+  const word = am<0.15?"in the middle" : am<0.6?"a little to the "+side : am<1.2?"to the "+side : "far "+side;
+  $("status3").innerHTML=`<div>Round: <strong>${Q.round}</strong></div><div>People still in the original middle: <strong>${(Q.log[0]*100).toFixed(0)}% → ${(cur*100).toFixed(0)}%</strong></div><div>Where the centre of the crowd is now: <strong>${word}</strong></div><div>Downvote: <strong>${(Q.round>=S.WS3?S.W3:0)>0?"on":"off"}</strong></div>`;
+  const hs=$("hist3"); hs.innerHTML=""; el("rect",{x:50,y:10,width:800,height:120,fill:"none",stroke:faint},hs);
+  const Yv=v=>130-v*120;
+  let d=""; for(let k=0;k<Q.log.length;k++) d+=(k?"L":"M")+(50+k/399*800).toFixed(1)+" "+Yv(Q.log[k]).toFixed(1);
+  el("path",{d,fill:"none",stroke:now,"stroke-width":2.5},hs);
+  if(S.WS3>0&&S.W3>0){ const xx=50+S.WS3/399*800; el("line",{x1:xx,x2:xx,y1:10,y2:130,stroke:cssv("--down"),"stroke-dasharray":"3 4"},hs); const t=el("text",{x:xx+4,y:24,fill:cssv("--down"),"font-size":13},hs); t.textContent="downvote on"; }
+  const a=el("text",{x:54,y:24,fill:muted,"font-size":13},hs); a.textContent="everyone"; const b2=el("text",{x:54,y:126,fill:muted,"font-size":13},hs); b2.textContent="nobody";
+}
+const PRESETS3 = [
+ {name:"Normal never moves", set:{ETA:0,K3:5,W3:0,WS3:0,PS3:0.9}, hint:"People's sense of the centre is fixed, so the hills form and then stop. This is tab 2."},
+ {name:"The extreme slowly becomes normal", set:{ETA:0.05,K3:5,W3:0,WS3:0,PS3:0.9}, hint:"Whoever wins drags the crowd's sense of the centre toward themselves. The whole crowd slides, the original middle empties, and it keeps going. The direction (left or right) is chance; use 'different random noise' to see both."},
+ {name:"Same, with the equal downvote", set:{ETA:0.05,K3:5,W3:1,WS3:0,PS3:0.9}, hint:"Same assumption, but the candidates huddle in the middle, so the winner IS the middle and the centre has nothing to slide toward."},
+ {name:"Downvote arrives late", set:{ETA:0.05,K3:5,W3:1,WS3:150,PS3:0.9}, hint:"The downvote switches on at round 150, after the centre has already slid. The slide stops, but the old middle does not come back: the new normal stays. Try switching it on earlier."}
+];
+function applyPreset3(p){ Q.seed=1; Object.assign(S,p.set); syncControls3(); resetNorm(); $("hint3").textContent=p.hint; writeHash(); }
+function syncControls3(){
+  const set=(id,val,txt)=>{$(id).value=val;$(id+"v").textContent=txt===undefined?val:txt};
+  set("ETA",S.ETA,S.ETA===0?"0 (never)":S.ETA.toFixed(3)); set("K3",S.K3); set("W3",S.W3,S.W3===0?"0 (upvote only)":S.W3===1?"1 (equal downvote)":S.W3.toFixed(2));
+  set("WS3",S.WS3,S.WS3===0?"0 (from the start)":S.WS3); set("PS3",S.PS3,S.PS3.toFixed(2)); set("SPEED3",S.SPEED3);
+}
+["ETA","K3","W3","WS3","PS3","SPEED3"].forEach(id=>{ $(id).addEventListener("input",e=>{ S[id]=+e.target.value; syncControls3(); if(id==="K3"||id==="PS3") resetNorm(); else render3(); writeHash(); }); });
+$("play3").addEventListener("click",play3); $("reset3").addEventListener("click",resetNorm);
+$("noise3").addEventListener("click",()=>{Q.seed=Q.seed%97+1; resetNorm(); $("hint3").textContent="Same setup, different random wobble (noise #"+Q.seed+"). Press Play.";});
+$("copy3").addEventListener("click",copyLink);
+
+/* ---------- tabs, hash, share ---------- */
+function showTab(n){ S.tab=n; stop(); stop2(); stop3(); $("p1").hidden=n!==1; $("p2").hidden=n!==2; $("p3").hidden=n!==3; [1,2,3].forEach(k=>$("tab"+k).setAttribute("aria-selected",n===k)); if(n===2&&!P.z){syncControls2();resetPop();} if(n===3&&!Q.z){syncControls3();resetNorm();} if(n===2) render2(); else if(n===3) render3(); else render1(); writeHash(); }
+$("tab1").addEventListener("click",()=>showTab(1)); $("tab2").addEventListener("click",()=>showTab(2)); $("tab3").addEventListener("click",()=>showTab(3));
+function writeHash(){
+  const q=new URLSearchParams(); q.set("t",S.tab);
+  if(S.tab===1){ q.set("K",S.K); q.set("w",S.W); q.set("s",S.shape); q.set("sd",S.SD); q.set("g",S.GAP); q.set("tl",S.TAIL); q.set("p",S.pos.map(v=>v.toFixed(3)).join(",")); if(S.lockA) q.set("lock",1); }
+  else if(S.tab===2){ ["K2","W2","WS","pk","PS","AL","MU"].forEach(k=>q.set(k,S[k])); }
+  else { ["K3","W3","WS3","PS3","ETA"].forEach(k=>q.set(k,S[k])); }
+  try{ history.replaceState(null,"","#"+q.toString()); }catch(e){}
+}
+function readHash(){
+  try{ const q=new URLSearchParams(location.hash.slice(1)); if(![...q.keys()].length) return false;
+    const num=(k,d)=>q.has(k)&&!isNaN(+q.get(k))?+q.get(k):d;
+    S.K=clamp(Math.round(num("K",5)),2,10); S.W=clamp(num("w",0),0,1); S.shape=["even","bell","hills"].includes(q.get("s"))?q.get("s"):"even";
+    S.SD=clamp(num("sd",.35),.12,.8); S.GAP=clamp(num("g",.6),.2,.9); S.TAIL=clamp(num("tl",0),0,.8); S.lockA=q.get("lock")==="1";
+    const p=(q.get("p")||"").split(",").map(Number).filter(v=>!isNaN(v)&&isFinite(v)).map(v=>snap(clamp(v,-1,1)));
+    S.pos = p.length===S.K ? p : spreadStart(S.K);
+    S.K2=clamp(Math.round(num("K2",5)),2,8); S.W2=clamp(num("W2",0),0,1); S.WS=clamp(Math.round(num("WS",0)),0,150);
+    S.pk=["normal","core","bimodal","heavy"].includes(q.get("pk"))?q.get("pk"):"normal"; S.PS=clamp(num("PS",.7),.4,1.4); S.AL=clamp(num("AL",.05),.01,.15); S.MU=clamp(num("MU",.02),0,.1);
+    S.K3=clamp(Math.round(num("K3",5)),2,8); S.W3=clamp(num("W3",0),0,1); S.WS3=clamp(Math.round(num("WS3",0)),0,300); S.PS3=clamp(num("PS3",.9),.4,1.4); S.ETA=clamp(num("ETA",.05),0,.1);
+    S.tab=[1,2,3].includes(num("t",1))?num("t",1):1; return true;
+  }catch(e){return false}
+}
+$("copy").addEventListener("click",copyLink); $("copy2").addEventListener("click",copyLink);
+function copyLink(e){ writeHash(); const b=e.target; const done=()=>{const o=b.textContent;b.textContent="Link copied";setTimeout(()=>b.textContent=o,1500)}; (navigator.clipboard?navigator.clipboard.writeText(location.href):Promise.reject()).then(done).catch(()=>{prompt("Copy this link:",location.href)}); }
+
+/* optional QR (loads a tiny library; the page works without it) */
+document.querySelector("details").addEventListener("toggle",e=>{
+  if(!e.target.open||$("qr").childNodes.length) return;
+  const make=()=>{ try{ const qr=qrcode(0,"M"); qr.addData(location.href); qr.make(); $("qr").innerHTML=qr.createSvgTag({cellSize:4,margin:2}); $("qr").firstChild.style.width="180px"; $("qr").firstChild.style.height="auto"; }catch(err){$("qrmsg").textContent="Could not make a QR code for this link (it may be too long). Use the plain page address instead."} };
+  if(window.qrcode) return make();
+  const s=document.createElement("script"); s.src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"; s.onload=make; s.onerror=()=>{$("qrmsg").textContent="Offline: could not load the QR library. Any QR generator works with this page's address."}; document.head.appendChild(s);
+});
+
+/* ---------- init ---------- */
+(function init(){
+  const pr=$("presets"); PRESETS.forEach(p=>{const b=document.createElement("button"); b.className="chip"; b.textContent=p.name; b.onclick=()=>applyPreset(p); pr.appendChild(b);});
+  const pr2=$("presets2"); PRESETS2.forEach(p=>{const b=document.createElement("button"); b.className="chip"; b.textContent=p.name; b.onclick=()=>applyPreset2(p); pr2.appendChild(b);});
+  const had=readHash();
+  if(!had){ S.pos=spreadStart(S.K); }
+  S.hist=[S.pos.slice()]; rebuildElectorate(); syncControls1(); syncControls2(); render1();
+  $("hint1").textContent = had ? "Setup loaded from the link. Press Play." : "Pick an example above, or just drag the candidates around. Then press Play.";
+  $("hint2").textContent = "Here people respond too: they drift toward the candidate they back. Pick an example above and press Play.";
+  const pr3=$("presets3"); PRESETS3.forEach(p=>{const b=document.createElement("button"); b.className="chip"; b.textContent=p.name; b.onclick=()=>applyPreset3(p); pr3.appendChild(b);});
+  $("hint3").textContent="Speculative: what if what people see winning slowly becomes their idea of normal? Pick an example above and press Play.";
+  if(S.tab!==1) showTab(S.tab);
+})();
+</script>
+</body>
+</html>
